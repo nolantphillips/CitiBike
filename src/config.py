@@ -35,5 +35,9 @@ FEATURE_VIEW_VERSION = 1
 
 FEATURE_GROUP_MODEL_PREDICTION = "bike_hourly_model_prediction"
 
-MODEL_NAME = "bike_demand_predictor_next_hour"
-MODEL_VERSION = 1
+MODEL_NAME_5905 = "bike_demand_predictor_next_hour_5905"
+MODEL_VERSION_5905 = 1
+MODEL_NAME_6140 = "bike_demand_predictor_next_hour_6140"
+MODEL_VERSION_6140 = 1
+MODEL_NAME_6822 = "bike_demand_predictor_next_hour_6822"
+MODEL_VERSION_6822 = 1

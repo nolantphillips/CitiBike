@@ -192,13 +192,13 @@ def filter_bike_data(rides: pd.DataFrame, year: int, month: int) -> pd.DataFrame
     return validated_rides
 
 def load_and_process_bike_data(
-        year: int, months: Optional[List[int]] = None
+        years: Optional[List[int]], months: Optional[List[int]] = None
 ) -> pd.DataFrame:
     """
     Load and process CitiBike ride data for a specified year and list of months.
 
     Args:
-        year (int): Year to load data for.
+        year (Optional[List[int]]): List of years to load.
         months (Optional[List[int]]): List of months to load. If None, loads all months (1-12).
 
     Returns:
@@ -213,46 +213,55 @@ def load_and_process_bike_data(
         months = list(range(1, 13))
 
     # List to store DataFrames for each month
-    monthly_rides = []
+    yearly_rides = []
+    for year in years:
+        monthly_rides = []
+        if year == 2025:
+            months = list(range(1,4))
 
-    for month in months:
-        # Construct the file path
-        file_path = RAW_DATA_DIR / f"citi_rides_{year}_{month:02}.parquet"
+        for month in months:
+            # Construct the file path
+            file_path = RAW_DATA_DIR / f"citi_rides_{year}_{month:02}.parquet"
 
-        try:
-            # Download the file if it doesn't exist
-            if not file_path.exists():
-                print(f"Downloading data for {year}-{month:02}...")
-                fetch_raw_data(year, month)
-                print(f"Successfully downloaded data for {year}-{month:02}.")
-            else:
-                print(f"File already exists for {year}-{month:02}.")
+            try:
+                # Download the file if it doesn't exist
+                if not file_path.exists():
+                    print(f"Downloading data for {year}-{month:02}...")
+                    fetch_raw_data(year, month)
+                    print(f"Successfully downloaded data for {year}-{month:02}.")
+                else:
+                    print(f"File already exists for {year}-{month:02}.")
 
-            # Load the data
-            print(f"Loading data for {year}-{month:02}...")
-            rides = pd.read_parquet(file_path, engine="pyarrow")
+                # Load the data
+                print(f"Loading data for {year}-{month:02}...")
+                rides = pd.read_parquet(file_path, engine="pyarrow")
 
-            # Filter and process the data
-            rides = filter_bike_data(rides, year, month)
-            print(f"Successfully processed data for {year}-{month:02}.")
+                # Filter and process the data
+                rides = filter_bike_data(rides, year, month)
+                print(f"Successfully processed data for {year}-{month:02}.")
 
-            # Append the processed DataFrame to the list
-            monthly_rides.append(rides)
+                # Append the processed DataFrame to the list
+                monthly_rides.append(rides)
 
-        except FileNotFoundError:
-            print(f"File not found for {year}-{month:02}. Skipping...")
-        except Exception as e:
-            print(f"Error processing data for {year}-{month:02}: {str(e)}")
-            continue
+            except FileNotFoundError:
+                print(f"File not found for {year}-{month:02}. Skipping...")
+            except Exception as e:
+                print(f"Error processing data for {year}-{month:02}: {str(e)}")
+                continue
 
-    # Combine all monthly data
-    if not monthly_rides:
-        raise Exception(
-            f"No data could be loaded for the year {year} and specified months: {months}"
-        )
+        # Combine all monthly data
+        if not monthly_rides:
+            raise Exception(
+                f"No data could be loaded for the year {year} and specified months: {months}"
+            )
 
-    print("Combining all monthly data...")
-    combined_rides = pd.concat(monthly_rides, ignore_index=True)
+        print("Combining all monthly data...")
+        month_combined_rides = pd.concat(monthly_rides, ignore_index=True)
+        print(f"Data loading and processing for {year} complete!")
+        yearly_rides.append(month_combined_rides)
+
+    print("Combining all data...")
+    combined_rides = pd.concat(yearly_rides, ignore_index=True)
     print("Data loading and processing complete!")
 
     return combined_rides.sort_values(by="started_at", ascending=True)
@@ -331,7 +340,7 @@ def transform_raw_data_into_ts_data(rides: pd.DataFrame) -> pd.DataFrame:
     )
     return agg_rides_all_slots
 
-def transform_ts_data_info_features_and_target_loop(
+def transform_ts_data_into_features_and_target_loop(
     df, feature_col="rides", window_size=12, step_size=1
 ):
     """
@@ -408,3 +417,35 @@ def transform_ts_data_info_features_and_target_loop(
     targets = final_df["target"]
 
     return features, targets
+
+def split_time_series_data(
+    df: pd.DataFrame,
+    cutoff_date: datetime,
+    target_column: str,
+) -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
+    """
+    Splits a time series DataFrame into training and testing sets based on a cutoff date.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame containing the time series data.
+        cutoff_date (datetime): The date used to split the data into training and testing sets.
+        target_column (str): The name of the target column to separate from the features.
+
+    Returns:
+        Tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
+            - X_train (pd.DataFrame): Training features.
+            - y_train (pd.Series): Training target values.
+            - X_test (pd.DataFrame): Testing features.
+            - y_test (pd.Series): Testing target values.
+    """
+    # Split the data into training and testing sets based on the cutoff date
+    train_data = df[df["start_hour"] < cutoff_date].reset_index(drop=True)
+    test_data = df[df["start_hour"] >= cutoff_date].reset_index(drop=True)
+
+    # Separate features (X) and target (y) for both training and testing sets
+    X_train = train_data.drop(columns=[target_column])
+    y_train = train_data[target_column]
+    X_test = test_data.drop(columns=[target_column])
+    y_test = test_data[target_column]
+
+    return X_train, y_train, X_test, y_test
