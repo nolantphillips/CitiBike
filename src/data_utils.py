@@ -149,7 +149,7 @@ def filter_bike_data(rides: pd.DataFrame, year: int, month: int) -> pd.DataFrame
 
     return validated_rides
 
-def load_and_process_bike_data2(
+def load_and_process_bike_data(
     years: Optional[List[int]], months: Optional[List[int]] = None
     ) -> pd.DataFrame:
     """
