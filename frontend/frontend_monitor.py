@@ -72,7 +72,7 @@ mae_by_station = (
     .rename(columns={"absolute_error": "MAE"})
 )
 
-station_ids = int(mae_by_station["start_station_id"].unique())
+station_ids = list(mae_by_station["start_station_id"].unique().astype(int))
 selected_station = st.sidebar.selectbox("Select Station ID", sorted(station_ids))
 station_name = station_dict[selected_station]["name"]
 

@@ -64,7 +64,7 @@ for _, row in predictions.iterrows():
     folium.CircleMarker(
         location=[row["latitude"], row["longitude"]],
         radius=8,
-        popup=f"{row['station_name']}: {row['predicted_demand']:.0f} rides",
+        popup=f"{row['name']}: {row['predicted_demand']:.0f} rides",
         color='blue',
         fill=True,
         fill_color='blue',
@@ -76,7 +76,7 @@ st_folium(map_obj, width=800, height=600)
 # Data table
 st.subheader("Top Predictions")
 st.dataframe(
-    predictions[["station_name", "predicted_demand", "start_hour"]]
+    predictions[["start_station_id", "name", "start_hour", "predicted_demand"]]
     .sort_values("predicted_demand", ascending=False)
     .reset_index(drop=True)
 )
