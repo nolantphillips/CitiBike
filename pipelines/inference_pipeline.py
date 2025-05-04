@@ -41,7 +41,7 @@ model_5905 = load_model_from_registry(station_id=5905)
 model_6140 = load_model_from_registry(station_id=6140)
 model_6822 = load_model_from_registry(station_id=6822)
 
-predictions = get_model_predictions(model_5905=model_5905, model_6140=model_6140, model_6822=model_6822, features)
+predictions = get_model_predictions(model_5905=model_5905, model_6140=model_6140, model_6822=model_6822, features=features)
 predictions["start_hour"] = current_date.ceil("h")
 print(predictions)
 
