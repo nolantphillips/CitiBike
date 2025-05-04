@@ -176,7 +176,7 @@ def fetch_hourly_rides(hours):
 
 
 def fetch_days_data(days):
-    current_date = pd.to_datetime(datetime.now())
+    current_date = pd.to_datetime(datetime.now()).tz_localize("US/Eastern")
     fetch_data_from = current_date - timedelta(days=(365 + days))
     fetch_data_to = current_date - timedelta(days=365)
     print(fetch_data_from, fetch_data_to)
@@ -184,7 +184,8 @@ def fetch_days_data(days):
     fg = fs.get_feature_group(name=config.FEATURE_GROUP_NAME, version=1)
 
     query = fg.select_all()
-    # query = query.filter((fg.pickup_hour >= fetch_data_from))
+    # query = query.filter((fg.start_hour >= fetch_data_from))
     df = query.read()
+    df["start_hour"] = df["start_hour"].dt.tz_convert("US/Eastern")
     cond = (df["start_hour"] >= fetch_data_from) & (df["start_hour"] <= fetch_data_to)
     return df[cond]
