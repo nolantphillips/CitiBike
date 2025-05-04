@@ -70,7 +70,6 @@ for i in range(0,3):
                 input_example=features_5905.sample(),
                 model_schema=model_schema,
             )
-            model.save(model_path)
         else:
             print(f"Skipping model registration because new model is not better!")
 
@@ -106,7 +105,6 @@ for i in range(0,3):
                 input_example=features_6140.sample(),
                 model_schema=model_schema,
             )
-            model.save(model_path)
         else:
             print(f"Skipping model registration because new model is not better!")
 
@@ -142,6 +140,5 @@ for i in range(0,3):
                 input_example=features_6822.sample(),
                 model_schema=model_schema,
             )
-            model.save(model_path)
         else:
             print(f"Skipping model registration because new model is not better!")
