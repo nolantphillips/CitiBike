@@ -6,7 +6,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 import src.config as config
-from src.data_utils import transform_ts_data_into_features_and_target_loop
+from src.data_utils import transform_ts_data_into_features_and_target_loop, split_time_series_data
 from src.inference import (
     fetch_days_data,
     get_hopsworks_project,
