@@ -37,14 +37,14 @@ with st.spinner("Fetching Predictions"):
 # Step 2: Add Station Metadata
 
 station_dict = {
-    5905: {"name": "Broadway & E 14 St",
+    5905.140137: {"name": "Broadway & E 14 St",
            "longitude": -73.99074142,
            "latitude": 40.73454567
            },
-    6140: {"name": "W 21 St & 6 Ave",
+    6140.049805: {"name": "W 21 St & 6 Ave",
            "longitude": -73.99415556,
            "latitude": 40.74173969},
-    6822: {"name": "1 Ave & E 68 St",
+    6822.089844: {"name": "1 Ave & E 68 St",
            "longitude": -73.958115339,
            "latitude": 40.765112281}
 }

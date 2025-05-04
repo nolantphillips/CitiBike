@@ -11,7 +11,7 @@ import streamlit as st
 
 from src.inference import fetch_hourly_rides, fetch_predictions
 
-st.title("Mean Absolute Error (MAE) by Pickup Hour")
+st.title("Mean Absolute Error (MAE) by Start Hour")
 
 # Sidebar for user input
 st.sidebar.header("Settings")
@@ -22,6 +22,19 @@ past_hours = st.sidebar.slider(
     value=12,  # Initial/default value
     step=1,  # Step size for increment/decrement
 )
+
+station_dict = {
+    5905: {"name": "Broadway & E 14 St",
+           "longitude": -73.99074142,
+           "latitude": 40.73454567
+           },
+    6140: {"name": "W 21 St & 6 Ave",
+           "longitude": -73.99415556,
+           "latitude": 40.74173969},
+    6822: {"name": "1 Ave & E 68 St",
+           "longitude": -73.958115339,
+           "latitude": 40.765112281}
+}
 
 # Fetch data
 st.write("Fetching data for the past", past_hours, "hours...")
@@ -59,8 +72,9 @@ mae_by_station = (
     .rename(columns={"absolute_error": "MAE"})
 )
 
-station_ids = mae_by_station["start_station_id"].unique()
+station_ids = int(mae_by_station["start_station_id"].unique())
 selected_station = st.sidebar.selectbox("Select Station ID", sorted(station_ids))
+station_name = station_dict[selected_station]["name"]
 
 station_mae = mae_by_station[mae_by_station["start_station_id"] == selected_station]
 
@@ -68,11 +82,11 @@ fig = px.line(
     station_mae,
     x="start_hour",
     y="MAE",
-    title=f"MAE for Station {selected_station} (Past {past_hours} Hours)",
+    title=f"MAE for Station {station_name} (Past {past_hours} Hours)",
     labels={"start_hour": "Start Hour", "MAE": "Mean Absolute Error"},
     markers=True,
 )
 
 # Display
 st.plotly_chart(fig)
-st.write(f'Average MAE for Station {selected_station}: {station_mae["MAE"].mean():.2f}')
+st.write(f'Average MAE for Station {station_name}: {station_mae["MAE"].mean():.2f}')
