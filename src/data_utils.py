@@ -437,10 +437,12 @@ def fetch_batch_raw_data(from_date: Union[datetime, str], to_date: Union[datetim
 
     # Load and filter data for the historical period
     rides_from = load_and_process_bike_data(years=[historical_from_date.year], months=[historical_from_date.month])
+    rides_from["started_at"] = rides_from["started_at"].dt.tz_localize("US/Eastern")
     rides_from = rides_from[rides_from.started_at >= historical_from_date]
 
     if historical_to_date.month != historical_from_date.month:
         rides_to = load_and_process_bike_data(years=[historical_to_date.year], months=[historical_to_date.month])
+        rides_to["started_at"] = rides_to["started_at"].dt.tz_localize("US/Eastern")
         rides_to = rides_to[rides_to.started_at < historical_to_date]
         # Combine the filtered data
         rides = pd.concat([rides_from, rides_to], ignore_index=True)
