@@ -2,6 +2,7 @@ import joblib
 from hsml.model_schema import ModelSchema
 from hsml.schema import Schema
 from sklearn.metrics import mean_absolute_error
+import pandas as pd
 
 import src.config as config
 from src.data_utils import transform_ts_data_into_features_and_target_loop
