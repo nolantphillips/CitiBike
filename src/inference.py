@@ -35,7 +35,7 @@ def get_model_predictions(model_5905, model_6140, model_6822, features: pd.DataF
     predictions = np.concatenate([predictions_5905, predictions_6140, predictions_6822])
 
     results = pd.DataFrame()
-    results["start_station_id"] = features["start_station_id"].values
+    results["start_station_id"] = features.sort_values(by = "start_station_id", ascending=True)["start_station_id"].values
     results["predicted_demand"] = predictions.round(0)
 
     return results

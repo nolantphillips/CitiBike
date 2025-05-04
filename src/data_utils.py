@@ -449,3 +449,53 @@ def split_time_series_data(
     y_test = test_data[target_column]
 
     return X_train, y_train, X_test, y_test
+
+def fetch_batch_raw_data(from_date: Union[datetime, str], to_date: Union[datetime, str]) -> pd.DataFrame:
+    """
+    Simulate production data by sampling historical data from 52 weeks ago (i.e., 1 year).
+
+    Args:
+        from_date (datetime or str): The start date for the data batch.
+        to_date (datetime or str): The end date for the data batch.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the simulated production data.
+    """
+    # Convert string inputs to datetime if necessary
+    if isinstance(from_date, str):
+        from_date = datetime.fromisoformat(from_date)
+    if isinstance(to_date, str):
+        to_date = datetime.fromisoformat(to_date)
+
+    # Validate input dates
+    if not isinstance(from_date, datetime) or not isinstance(to_date, datetime):
+        raise ValueError("Both 'from_date' and 'to_date' must be datetime objects or valid ISO format strings.")
+    if from_date >= to_date:
+        raise ValueError("'from_date' must be earlier than 'to_date'.")
+
+    # Shift dates back by 52 weeks (1 year)
+    historical_from_date = from_date - timedelta(weeks=52)
+    historical_to_date = to_date - timedelta(weeks=52)
+
+    # Load and filter data for the historical period
+    rides_from = load_and_process_bike_data(years=[historical_from_date.year], months=[historical_from_date.month])
+    rides_from = rides_from[rides_from.started_at >= historical_from_date]
+
+    if historical_to_date.month != historical_from_date.month:
+        rides_to = load_and_process_bike_data(years=[historical_to_date.year], months=[historical_to_date.month])
+        rides_to = rides_to[rides_to.started_at < historical_to_date]
+        # Combine the filtered data
+        rides = pd.concat([rides_from, rides_to], ignore_index=True)
+    else:
+        rides_from = rides_from[
+            (rides_from.started_at >= historical_from_date) &
+            (rides_from.started_at < historical_to_date)
+        ]
+        rides = rides_from
+    # Shift the data forward by 52 weeks to simulate recent data
+    rides['started_at'] += timedelta(weeks=52)
+
+    # Sort the data for consistency
+    rides.sort_values(by=['start_station_id', 'started_at'], inplace=True)
+
+    return rides
