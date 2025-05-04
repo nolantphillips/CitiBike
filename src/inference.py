@@ -22,9 +22,17 @@ def get_feature_store() -> FeatureStore:
     return project.get_feature_store()
 
 
-def get_model_predictions(model, features: pd.DataFrame) -> pd.DataFrame:
+def get_model_predictions(model_5905, model_6140, model_6822, features: pd.DataFrame) -> pd.DataFrame:
     # past_rides_columns = [c for c in features.columns if c.startswith('rides_')]
-    predictions = model.predict(features)
+    features_5905 = features[features["start_station_id"] == 5905.140137]
+    features_6140 = features[features["start_station_id"] == 6140.049805]
+    features_6822 = features[features["start_station_id"] == 6822.089844]
+
+    predictions_5905 = model_5905.predict(features_5905)
+    predictions_6140 = model_6140.predict(features_6140)
+    predictions_6822 = model_6822.predict(features_6822)
+
+    predictions = np.concatenate([predictions_5905, predictions_6140, predictions_6822])
 
     results = pd.DataFrame()
     results["start_station_id"] = features["start_station_id"].values
