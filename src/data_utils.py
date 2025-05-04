@@ -19,115 +19,73 @@ import zipfile
 
 from src.config import RAW_DATA_DIR
 
-def fetch_raw_data(year:int, month:int) -> str:
+def fetch_raw_data(year: int, month: int) -> str:
+    """
+    Download, extract, and convert Citi Bike trip data to Parquet format.
+    The file is saved in RAW_DATA_DIR and is usable by GitHub Actions,
+    even if the directory is in .gitignore.
+    """
+    path = RAW_DATA_DIR / f"citi_rides_{year}_{month:02}.parquet"
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # If file already exists, return it
+    if path.exists():
+        print(f"Using cached file: {path}")
+        return str(path)
+
+    # Determine correct URL based on year/month
     if (year == 2024 and month in range(1, 5)) or (year == 2025 and month == 3):
         url = f"https://s3.amazonaws.com/tripdata/{year}{month:02}-citibike-tripdata.csv.zip"
-
-        response = requests.get(url)
-        if response.status_code == 200:
-            path = Path('..') / 'data' / 'raw' / f"citi_rides_{year}_{month:02}.parquet"
-            path.parent.mkdir(parents=True, exist_ok=True)
-
-            with zipfile.ZipFile(BytesIO(response.content)) as z:
-                csv_files = [f for f in z.namelist() if f.lower().endswith('.csv') and 'macosx' not in f.lower()]
-
-                if not csv_files:
-                    print("No CSV files found in zip file")
-                else:
-                    dfs = []
-                    for csv_file in csv_files:
-                        with z.open(csv_file) as f:
-                            df = pd.read_csv(f)
-                            for col in ['start_station_id', 'end_station_id']:
-                                if col in df.columns:
-                                    df[col] = df[col].astype(str)
-
-                            dfs.append(df)
-
-                    if dfs:
-                        combined_df = pd.concat(dfs, ignore_index=True)
-                        combined_df.to_parquet(path, index=False)
-                        print(f"Saved {len(combined_df)} rows to {path}")
-                        return str(path)
-        else:
-            print("Incorrect URL")
-
-    elif (year >= 2024 and month in range (5, 13)) or (year == 2025 and month in (1, 2)):
+    elif (year >= 2024 and month in range(5, 13)) or (year == 2025 and month in (1, 2)):
         url = f"https://s3.amazonaws.com/tripdata/{year}{month:02}-citibike-tripdata.zip"
-
-        response = requests.get(url)
-        if response.status_code == 200:
-            path = RAW_DATA_DIR / f"citi_rides_{year}_{month:02}.parquet"
-            path.parent.mkdir(parents=True, exist_ok=True)
-
-            with zipfile.ZipFile(BytesIO(response.content)) as z:
-                csv_files = [f for f in z.namelist() if f.lower().endswith('.csv') and 'macosx' not in f.lower()]
-
-                if not csv_files:
-                    print("No CSV files found in zip file")
-                else:
-                    dfs = []
-                    for csv_file in csv_files:
-                        with z.open(csv_file) as f:
-                            df = pd.read_csv(f)
-                            for col in ['start_station_id', 'end_station_id']:
-                                if col in df.columns:
-                                    df[col] = df[col].astype(str)
-
-                            dfs.append(df)
-
-                    if dfs:
-                        combined_df = pd.concat(dfs, ignore_index=True)
-                        combined_df.to_parquet(path, index=False)
-                        print(f"Saved {len(combined_df)} rows to {path}")
-                        return str(path)
-        else:
-            print("Incorrect URL")
-
     elif year < 2024:
         url = f"https://s3.amazonaws.com/tripdata/{year}-citibike-tripdata.zip"
+    else:
+        raise ValueError(f"No known data format for {year}-{month:02}")
 
-        response = requests.get(url)
-        if response.status_code == 200:
-            path = RAW_DATA_DIR / f"citi_rides_{year}_{month:02}.parquet"
-            path.parent.mkdir(parents=True, exist_ok=True)
+    # Download the zip
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise FileNotFoundError(f"Could not download file from {url}")
 
-            outer_zip = zipfile.ZipFile(BytesIO(response.content))
-            target_month_prefix = f"{year}{month:02}"
-            monthly_zip_name = next(
-                (f for f in outer_zip.namelist()
-                 if f.endswith('.zip') and target_month_prefix in f and 'macosx' not in f.lower()),
-                 None
+    if year < 2024:
+        with zipfile.ZipFile(BytesIO(response.content)) as outer_zip:
+            target_prefix = f"{year}{month:02}"
+            inner_zip_name = next(
+                (f for f in outer_zip.namelist() if f.endswith(".zip") and target_prefix in f),
+                None
             )
+            if not inner_zip_name:
+                raise FileNotFoundError(f"No nested zip file found for {target_prefix} in archive.")
+            with outer_zip.open(inner_zip_name) as nested:
+                with zipfile.ZipFile(BytesIO(nested.read())) as inner_zip:
+                    dfs = _read_csvs_from_zip(inner_zip)
+    else:
+        with zipfile.ZipFile(BytesIO(response.content)) as z:
+            dfs = _read_csvs_from_zip(z)
 
-            if not monthly_zip_name:
-                print(f"No zip found for {target_month_prefix}")
-        
-            with outer_zip.open(monthly_zip_name) as nested_zip_file:
-                with zipfile.ZipFile(BytesIO(nested_zip_file.read())) as inner_zip:
-                    csv_files = [f for f in inner_zip.namelist()
-                                if f.endswith('.csv') and 'macosx' not in f.lower()]
-                    dfs = []
+    if not dfs:
+        raise ValueError("No CSV data found in zip file.")
 
-                    for csv_file in csv_files:
-                        with inner_zip.open(csv_file) as f:
-                            df = pd.read_csv(f)
+    # Combine and save as Parquet
+    combined_df = pd.concat(dfs, ignore_index=True)
+    combined_df.to_parquet(path, index=False)
+    print(f"Saved {len(combined_df)} rows to {path}")
+    return path
 
-                            for col in ['start_station_id', 'end_station_id']:
-                                if col in df.columns:
-                                    df[col] = df[col].astype(str)
 
-                            dfs.append(df)
-
-                    if dfs:
-                        combined_df = pd.concat(dfs, ignore_index=True)
-                        combined_df.to_parquet(path, index=False)
-                        print(f"Saved {len(combined_df)} rows to {path}")
-                        return str(path)
-                    else:
-                        print("No CSV files found in the inner ZIP.")
-        else:
-            print("File not found")
+def _read_csvs_from_zip(zip_file) -> list[pd.DataFrame]:
+    """Helper to extract and parse CSVs inside a zip."""
+    csv_files = [f for f in zip_file.namelist() if f.lower().endswith('.csv') and 'macosx' not in f.lower()]
+    dfs = []
+    for file in csv_files:
+        with zip_file.open(file) as f:
+            df = pd.read_csv(f)
+            for col in ['start_station_id', 'end_station_id']:
+                if col in df.columns:
+                    df[col] = df[col].astype(str)
+            dfs.append(df)
+    return dfs
 
 def filter_bike_data(rides: pd.DataFrame, year: int, month: int) -> pd.DataFrame:
     """
@@ -191,9 +149,9 @@ def filter_bike_data(rides: pd.DataFrame, year: int, month: int) -> pd.DataFrame
 
     return validated_rides
 
-def load_and_process_bike_data(
-        years: Optional[List[int]], months: Optional[List[int]] = None
-) -> pd.DataFrame:
+def load_and_process_bike_data2(
+    years: Optional[List[int]], months: Optional[List[int]] = None
+    ) -> pd.DataFrame:
     """
     Load and process CitiBike ride data for a specified year and list of months.
 
