@@ -27,7 +27,7 @@ features, targets = transform_ts_data_into_features_and_target_loop(
 features_targets = features.copy()
 features_targets["target"] = targets
 
-cutoff_date = pd.Timestamp(datetime.now() - timedelta(days=28))
+cutoff_date = pd.Timestamp(datetime.now() - timedelta(days=365 + 28))
 
 df_5905 = features_targets[features_targets["start_station_id"] == 5905.140137]
 df_6140 = features_targets[features_targets["start_station_id"] == 6140.049805]
