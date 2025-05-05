@@ -132,7 +132,7 @@ def load_metrics_from_registry(station_id, version=None):
 
 def fetch_next_hour_predictions():
     # Get current time and round up to next hour
-    now = datetime.now() - timedelta(hours=0)
+    now = datetime.now() - timedelta(hours=4)
     next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
 
     fs = get_feature_store()
