@@ -87,13 +87,16 @@ with st.spinner("Making Map of NYC"):
     st.sidebar.write("Map Plotted")
     progress_bar.progress(4 / N_STEPS)
 
-# Data table
-st.subheader("Predictions")
-st.dataframe(
-    predictions[["start_station_id", "name", "start_hour", "predicted_demand"]]
-    .sort_values("predicted_demand", ascending=False)
-    .reset_index(drop=True)
-)
+with st.spinner("Creating Table"):
+    # Data table
+    st.subheader("Predictions")
+    st.dataframe(
+        predictions[["start_station_id", "name", "start_hour", "predicted_demand"]]
+        .sort_values("predicted_demand", ascending=False)
+        .reset_index(drop=True)
+    )
+    st.sidebar.write("Table Created")
+    progress_bar.progress(5 / N_STEPS)
 
 rides = fetch_hourly_rides(672)
 preds = fetch_predictions(672)

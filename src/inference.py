@@ -151,25 +151,25 @@ def fetch_next_hour_predictions():
 
 
 def fetch_predictions(hours):
-    current_hour = (pd.Timestamp.now() - timedelta(hours=hours)).floor("h")
+    current_hour_utc = (pd.Timestamp.now(tz="UTC") - timedelta(hours=hours)).floor("h")
 
     fs = get_feature_store()
     fg = fs.get_feature_group(name=config.FEATURE_GROUP_MODEL_PREDICTION, version=1)
-
-    df = fg.filter((fg.start_hour >= current_hour)).read()
+    df = fg.read()
+    df = df[df["start_hour"] >= current_hour_utc]
     df["start_hour"] = df["start_hour"].dt.tz_convert("US/Eastern")
     return df
 
 
 def fetch_hourly_rides(hours):
-    current_hour = (pd.Timestamp.now() - timedelta(hours=hours)).floor("h")
+    from_current_hour_utc = (pd.Timestamp.now(tz="UTC") - timedelta(hours=hours)).floor("h")
+    to_current_hour_utc = pd.Timestamp.now(tz="UTC").floor('h')
 
     fs = get_feature_store()
     fg = fs.get_feature_group(name=config.FEATURE_GROUP_NAME, version=1)
-
-    query = fg.select_all()
-    query = query.filter(fg.start_hour >= current_hour)
-    df = query.read()
+    df = fg.read()
+    mask = (df["start_hour"] >= from_current_hour_utc) & (df["start_hour"] <= to_current_hour_utc)
+    df = df[mask]
     df["start_hour"] = df["start_hour"].dt.tz_convert("US/Eastern")
 
     return df
