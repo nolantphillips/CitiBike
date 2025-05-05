@@ -80,13 +80,13 @@ with st.spinner("Merging Predictions with Station Information"):
     st.sidebar.write("Information merged")
     progress_bar.progress(2 / N_STEPS)
 
-# Map visualization
+# # Map visualization
 with st.spinner("Making Map of NYC"):
-    st.subheader("Predicted Demand Map")
-    map_obj = create_map(predictions)
+#     st.subheader("Predicted Demand Map")
+#     map_obj = create_map(predictions)
 
-    st_folium(map_obj, width=800, height=600)
-    st.sidebar.write("Map Plotted")
+#     st_folium(map_obj, width=800, height=600)
+#     st.sidebar.write("Map Plotted")
     progress_bar.progress(3 / N_STEPS)
 
 with st.spinner("Creating Table"):
