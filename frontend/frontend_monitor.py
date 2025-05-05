@@ -90,4 +90,4 @@ fig = px.line(
 
 # Display
 st.plotly_chart(fig)
-st.write(f'Average MAE for Station {selected_station}: {station_mae["MAE"].mean():.2f}')
+st.write(f'Average MAE for Station {station_name}: {station_mae["MAE"].mean():.2f}')

@@ -99,35 +99,33 @@ selected_station = st.selectbox("Select a station to view predictions and actual
 preds_station_data = preds[preds["name"] == selected_station].sort_values("start_hour")
 rides_station_data = rides[rides["name"] == selected_station].sort_values("start_hour")
 
-if not station_data.empty and "actual_rides" in station_data.columns:
-    fig = go.Figure()
 
-    # Add predicted demand
-    fig.add_trace(go.Scatter(
-        x=preds_station_data["start_hour"],
-        y=preds_station_data["predicted_demand"],
-        mode='lines+markers',
-        name='Predicted Demand',
-        line=dict(color='blue')
-    ))
+fig = go.Figure()
 
-    # Add actual rides
-    fig.add_trace(go.Scatter(
-        x=rides_station_data["start_hour"],
-        y=rides_station_data["rides"],
-        mode='lines+markers',
-        name='Actual Rides',
-        line=dict(color='green')
-    ))
+# Add predicted demand
+fig.add_trace(go.Scatter(
+    x=preds_station_data["start_hour"],
+    y=preds_station_data["predicted_demand"],
+    mode='lines+markers',
+    name='Predicted Demand',
+    line=dict(color='blue')
+))
 
-    fig.update_layout(
-        title=f"Predicted vs Actual Demand – {selected_station}",
-        xaxis_title="Time",
-        yaxis_title="Number of Rides",
-        legend_title="Legend",
-        height=500
-    )
+# Add actual rides
+fig.add_trace(go.Scatter(
+    x=rides_station_data["start_hour"],
+    y=rides_station_data["rides"],
+    mode='lines+markers',
+    name='Actual Rides',
+    line=dict(color='green')
+))
 
-    st.plotly_chart(fig, use_container_width=True)
-else:
-    st.warning("Actual rides data is not available or this station has no data.")
+fig.update_layout(
+    title=f"Predicted vs Actual Demand – {selected_station}",
+    xaxis_title="Time",
+    yaxis_title="Number of Rides",
+    legend_title="Legend",
+    height=500
+)
+
+st.plotly_chart(fig, use_container_width=True)
