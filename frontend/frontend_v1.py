@@ -105,7 +105,7 @@ rides = pd.merge(rides, station_df, on='start_station_id', how='left')
 
 # Station selector
 st.subheader("Station-Level Trend")
-station_options = predictions["name"].dropna().unique()
+station_options = preds["name"].dropna().unique()
 selected_station = st.selectbox("Select a station to view predictions and actual rides", station_options)
 
 # Filter data for the selected station
@@ -113,9 +113,28 @@ preds_station_data = preds[preds["name"] == selected_station].sort_values("start
 rides_station_data = rides[rides["name"] == selected_station].sort_values("start_hour")
 
 
-fig = plot_prediction(
-    features=features[features["start_station_id"] == selected_station],
-    prediction=predictions[predictions["start_station_id"] == selected_station],
+fig = go.Figure()
+# Base plot
+fig.add_trace(go.Scatter(
+    x=rides_station_data["start_hour"],
+    y=rides_station_data["rides"],
+    mode="lines+markers",
+    name="Actual Rides"
+))
+
+fig.add_trace(go.Scatter(
+    x=preds_station_data["start_hour"],
+    y=preds_station_data["predicted_demand"],
+    mode="lines+markers",
+    name="Predicted Demand",
+    line=dict(dash='dash', color="orange")
+))
+
+fig.update_layout(
+    title=f"Ride Counts and Predicted Demand for Station @ {selected_station}",
+    xaxis_title="Time",
+    yaxis_title="Rides",
+    template="plotly_white"
 )
 
 st.plotly_chart(fig, theme="streamlit", use_container_width=True)

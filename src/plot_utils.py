@@ -121,3 +121,45 @@ def plot_prediction(features: pd.DataFrame, prediction: int):
     )
 
     return fig
+
+def plot_prediction2(features: pd.DataFrame, prediction: pd.DataFrame):
+    # --- Historical ---
+    ride_cols = sorted([col for col in features.columns if col.startswith("rides_t-")], 
+                       key=lambda x: int(x.split("-")[1]))
+    ride_values = [features[col].iloc[0] for col in ride_cols]
+    last_hist_time = pd.Timestamp(features["start_hour"].iloc[0]) - pd.Timedelta(hours=1)
+    hist_dates = pd.date_range(end=last_hist_time, periods=len(ride_values), freq="h")
+
+    df_hist = pd.DataFrame({
+        "datetime": hist_dates,
+        "rides": ride_values,
+        "type": "Historical"
+    })
+
+    # --- Predictions ---
+    if not {"start_hour", "predicted_demand"}.issubset(prediction.columns):
+        raise ValueError("Prediction DataFrame must contain 'start_hour' and 'predicted_demand'.")
+
+    df_pred = pd.DataFrame({
+        "datetime": prediction["start_hour"],
+        "rides": prediction["predicted_demand"],
+        "type": "Predicted"
+    })
+
+    # --- Combine ---
+    df_all = pd.concat([df_hist, df_pred], ignore_index=True)
+
+    title = f"Predicted Demand – Station {features['start_station_id'].iloc[0]}"
+
+    fig = px.line(
+        df_all,
+        x="datetime",
+        y="rides",
+        color="type",
+        markers=True,
+        title=title,
+        labels={"datetime": "Time", "rides": "Ride Counts", "type": "Data Type"},
+        template="plotly_white"
+    )
+
+    return fig
