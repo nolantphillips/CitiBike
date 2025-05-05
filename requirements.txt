@@ -10,7 +10,7 @@ scikit-learn
 mlflow
 lightgbm
 confluent-kafka
-hopsworks==3.7
+hopsworks
 hsml
 streamlit
 geopandas
