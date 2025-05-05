@@ -18,6 +18,29 @@ from src.config import DATA_DIR
 from src.inference import fetch_next_hour_predictions, load_batch_of_features_from_store, fetch_hourly_rides, fetch_predictions
 from src.plot_utils import plot_prediction
 
+@st.cache_resource
+def create_map(predictions):
+    map_obj = folium.Map(location=[40.76, -73.98], zoom_start=12)
+    for _, row in predictions.iterrows():
+        folium.CircleMarker(
+            location=[row["latitude"], row["longitude"]],
+            radius=8,
+            popup=f"{row['name']}: {row['predicted_demand']:.0f} rides",
+            color='blue',
+            fill=True,
+            fill_color='blue',
+            fill_opacity=0.6,
+        ).add_to(map_obj)
+    return map_obj
+
+@st.cache_data(ttl=3600)  # Cache the function for an hour
+def fetch_predictions_st(hours):
+    return fetch_predictions(hours)
+
+@st.cache_data(ttl=3600)  # Cache the function for an hour
+def fetch_hourly_rides_st(hours):
+    return fetch_hourly_rides(hours)
+
 st.set_page_config(layout="wide")
 
 # Current timestamp in EST
@@ -27,19 +50,12 @@ st.header(f"{current_date.strftime('%Y-%m-%d %H:%M:%S')} (EST)")
 
 # Sidebar progress
 progress_bar = st.sidebar.progress(0)
-N_STEPS = 5
+N_STEPS = 4
 
-# Step 1: Fetch Features
-with st.spinner(text="Fetching batch of inference data"):
-    features = load_batch_of_features_from_store(current_date)
-    st.sidebar.write("Inference features fetched from the store")
-    progress_bar.progress(1 / N_STEPS)
-
-# Step 2: Fetch Predictions
 with st.spinner("Fetching Predictions"):
     predictions = fetch_next_hour_predictions()
     st.sidebar.write("Predictions fetched")
-    progress_bar.progress(2 / N_STEPS)
+    progress_bar.progress(1 / N_STEPS)
 
 # Step 3: Add Station Metadata
 
@@ -61,31 +77,17 @@ with st.spinner("Merging Predictions with Station Information"):
     station_df.rename(columns={'index': 'start_station_id'}, inplace=True)
     predictions["start_station_id"] = predictions["start_station_id"].round(0).astype(int)
     predictions = pd.merge(predictions, station_df, on='start_station_id', how='left')
-    features["start_station_id"] = features["start_station_id"].round(0).astype(int)
-    features = pd.merge(features, station_df, on='start_station_id', how='left')
     st.sidebar.write("Information merged")
-    progress_bar.progress(3 / N_STEPS)
+    progress_bar.progress(2 / N_STEPS)
 
 # Map visualization
 with st.spinner("Making Map of NYC"):
     st.subheader("Predicted Demand Map")
-    map_center = [40.76, -73.98]
-    map_obj = folium.Map(location=map_center, zoom_start=12)
-
-    for _, row in predictions.iterrows():
-        folium.CircleMarker(
-            location=[row["latitude"], row["longitude"]],
-            radius=8,
-            popup=f"{row['name']}: {row['predicted_demand']:.0f} rides",
-            color='blue',
-            fill=True,
-            fill_color='blue',
-            fill_opacity=0.6,
-        ).add_to(map_obj)
+    map_obj = create_map(predictions)
 
     st_folium(map_obj, width=800, height=600)
     st.sidebar.write("Map Plotted")
-    progress_bar.progress(4 / N_STEPS)
+    progress_bar.progress(3 / N_STEPS)
 
 with st.spinner("Creating Table"):
     # Data table
@@ -96,7 +98,7 @@ with st.spinner("Creating Table"):
         .reset_index(drop=True)
     )
     st.sidebar.write("Table Created")
-    progress_bar.progress(5 / N_STEPS)
+    progress_bar.progress(4 / N_STEPS)
 
 rides = fetch_hourly_rides(672)
 preds = fetch_predictions(672)
