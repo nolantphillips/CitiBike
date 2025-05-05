@@ -24,14 +24,14 @@ past_hours = st.sidebar.slider(
 )
 
 station_dict = {
-    5905.140137: {"name": "Broadway & E 14 St",
+    int(5905): {"name": "Broadway & E 14 St",
            "longitude": -73.99074142,
            "latitude": 40.73454567
            },
-    6140.049805: {"name": "W 21 St & 6 Ave",
+    int(6140.0): {"name": "W 21 St & 6 Ave",
            "longitude": -73.99415556,
            "latitude": 40.74173969},
-    6822.089844: {"name": "1 Ave & E 68 St",
+    int(6822.0): {"name": "1 Ave & E 68 St",
            "longitude": -73.958115339,
            "latitude": 40.765112281}
 }
@@ -71,8 +71,9 @@ mae_by_station = (
     .reset_index()
     .rename(columns={"absolute_error": "MAE"})
 )
+mae_by_station["start_station_id"] = mae_by_station["start_station_id"].round(0).astype(int)
 
-station_ids = mae_by_station["start_station_id"].unique()
+station_ids = mae_by_station["start_station_id"].unique().round(0).astype(int)
 selected_station = st.sidebar.selectbox("Select Station ID", sorted(station_ids))
 station_name = station_dict[selected_station]["name"]
 

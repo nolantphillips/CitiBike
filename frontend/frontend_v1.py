@@ -12,9 +12,10 @@ import requests
 import streamlit as st
 from branca.colormap import LinearColormap
 from streamlit_folium import st_folium
+import plotly.graph_objects as go
 
 from src.config import DATA_DIR
-from src.inference import fetch_next_hour_predictions, load_batch_of_features_from_store
+from src.inference import fetch_next_hour_predictions, load_batch_of_features_from_store, fetch_hourly_rides, fetch_predictions
 from src.plot_utils import plot_prediction
 
 st.set_page_config(layout="wide")
@@ -55,14 +56,6 @@ predictions["start_station_id"] = predictions["start_station_id"].round(0).astyp
 predictions = pd.merge(predictions, station_df, on='start_station_id', how='left')
 progress_bar.progress(2 / N_STEPS)
 
-# Data table
-st.subheader("Top Predictions")
-st.dataframe(
-    predictions[["start_station_id", "name", "start_hour", "predicted_demand"]]
-    .sort_values("predicted_demand", ascending=False)
-    .reset_index(drop=True)
-)
-
 # Map visualization
 st.subheader("Predicted Demand Map")
 map_center = [40.76, -73.98]
@@ -82,9 +75,59 @@ for _, row in predictions.iterrows():
 st_folium(map_obj, width=800, height=600)
 
 # Data table
-st.subheader("Top Predictions")
+st.subheader("Predictions")
 st.dataframe(
     predictions[["start_station_id", "name", "start_hour", "predicted_demand"]]
     .sort_values("predicted_demand", ascending=False)
     .reset_index(drop=True)
 )
+
+rides = fetch_hourly_rides(672)
+preds = fetch_predictions(672)
+
+preds["start_station_id"] = preds["start_station_id"].round(0).astype(int)
+preds = pd.merge(preds, station_df, on='start_station_id', how='left')
+rides["start_station_id"] = rides["start_station_id"].round(0).astype(int)
+rides = pd.merge(rides, station_df, on='start_station_id', how='left')
+
+# Station selector
+st.subheader("Station-Level Trend")
+station_options = predictions["name"].dropna().unique()
+selected_station = st.selectbox("Select a station to view predictions and actual rides", station_options)
+
+# Filter data for the selected station
+preds_station_data = preds[preds["name"] == selected_station].sort_values("start_hour")
+rides_station_data = rides[rides["name"] == selected_station].sort_values("start_hour")
+
+if not station_data.empty and "actual_rides" in station_data.columns:
+    fig = go.Figure()
+
+    # Add predicted demand
+    fig.add_trace(go.Scatter(
+        x=preds_station_data["start_hour"],
+        y=preds_station_data["predicted_demand"],
+        mode='lines+markers',
+        name='Predicted Demand',
+        line=dict(color='blue')
+    ))
+
+    # Add actual rides
+    fig.add_trace(go.Scatter(
+        x=rides_station_data["start_hour"],
+        y=rides_station_data["rides"],
+        mode='lines+markers',
+        name='Actual Rides',
+        line=dict(color='green')
+    ))
+
+    fig.update_layout(
+        title=f"Predicted vs Actual Demand – {selected_station}",
+        xaxis_title="Time",
+        yaxis_title="Number of Rides",
+        legend_title="Legend",
+        height=500
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.warning("Actual rides data is not available or this station has no data.")
