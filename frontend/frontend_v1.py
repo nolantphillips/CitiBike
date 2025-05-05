@@ -27,15 +27,21 @@ st.header(f"{current_date.strftime('%Y-%m-%d %H:%M:%S')} (EST)")
 
 # Sidebar progress
 progress_bar = st.sidebar.progress(0)
-N_STEPS = 2
+N_STEPS = 5
 
-# Step 1: Fetch Predictions
+# Step 1: Fetch Features
+with st.spinner(text="Fetching batch of inference data"):
+    features = load_batch_of_features_from_store(current_date)
+    st.sidebar.write("Inference features fetched from the store")
+    progress_bar.progress(1 / N_STEPS)
+
+# Step 2: Fetch Predictions
 with st.spinner("Fetching Predictions"):
     predictions = fetch_next_hour_predictions()
     st.sidebar.write("Predictions fetched")
-    progress_bar.progress(1 / N_STEPS)
+    progress_bar.progress(2 / N_STEPS)
 
-# Step 2: Add Station Metadata
+# Step 3: Add Station Metadata
 
 station_dict = {
     int(5905.0): {"name": "Broadway & E 14 St",
@@ -50,29 +56,36 @@ station_dict = {
            "latitude": 40.765112281}
 }
 
-station_df = pd.DataFrame.from_dict(station_dict, orient='index').reset_index()
-station_df.rename(columns={'index': 'start_station_id'}, inplace=True)
-predictions["start_station_id"] = predictions["start_station_id"].round(0).astype(int)
-predictions = pd.merge(predictions, station_df, on='start_station_id', how='left')
-progress_bar.progress(2 / N_STEPS)
+with st.spinner("Merging Predictions with Station Information"):
+    station_df = pd.DataFrame.from_dict(station_dict, orient='index').reset_index()
+    station_df.rename(columns={'index': 'start_station_id'}, inplace=True)
+    predictions["start_station_id"] = predictions["start_station_id"].round(0).astype(int)
+    predictions = pd.merge(predictions, station_df, on='start_station_id', how='left')
+    features["start_station_id"] = features["start_station_id"].round(0).astype(int)
+    features = pd.merge(features, station_df, on='start_station_id', how='left')
+    st.sidebar.write("Information merged")
+    progress_bar.progress(3 / N_STEPS)
 
 # Map visualization
-st.subheader("Predicted Demand Map")
-map_center = [40.76, -73.98]
-map_obj = folium.Map(location=map_center, zoom_start=12)
+with st.spinner("Making Map of NYC"):
+    st.subheader("Predicted Demand Map")
+    map_center = [40.76, -73.98]
+    map_obj = folium.Map(location=map_center, zoom_start=12)
 
-for _, row in predictions.iterrows():
-    folium.CircleMarker(
-        location=[row["latitude"], row["longitude"]],
-        radius=8,
-        popup=f"{row['name']}: {row['predicted_demand']:.0f} rides",
-        color='blue',
-        fill=True,
-        fill_color='blue',
-        fill_opacity=0.6,
-    ).add_to(map_obj)
+    for _, row in predictions.iterrows():
+        folium.CircleMarker(
+            location=[row["latitude"], row["longitude"]],
+            radius=8,
+            popup=f"{row['name']}: {row['predicted_demand']:.0f} rides",
+            color='blue',
+            fill=True,
+            fill_color='blue',
+            fill_opacity=0.6,
+        ).add_to(map_obj)
 
-st_folium(map_obj, width=800, height=600)
+    st_folium(map_obj, width=800, height=600)
+    st.sidebar.write("Map Plotted")
+    progress_bar.progress(4 / N_STEPS)
 
 # Data table
 st.subheader("Predictions")
@@ -100,32 +113,9 @@ preds_station_data = preds[preds["name"] == selected_station].sort_values("start
 rides_station_data = rides[rides["name"] == selected_station].sort_values("start_hour")
 
 
-fig = go.Figure()
-
-# Add predicted demand
-fig.add_trace(go.Scatter(
-    x=preds_station_data["start_hour"],
-    y=preds_station_data["predicted_demand"],
-    mode='lines+markers',
-    name='Predicted Demand',
-    line=dict(color='blue')
-))
-
-# Add actual rides
-fig.add_trace(go.Scatter(
-    x=rides_station_data["start_hour"],
-    y=rides_station_data["rides"],
-    mode='lines+markers',
-    name='Actual Rides',
-    line=dict(color='green')
-))
-
-fig.update_layout(
-    title=f"Predicted vs Actual Demand – {selected_station}",
-    xaxis_title="Time",
-    yaxis_title="Number of Rides",
-    legend_title="Legend",
-    height=500
+fig = plot_prediction(
+    features=features[features["start_station_id"] == selected_station],
+    prediction=predictions[predictions["start_station_id"] == selected_station],
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, theme="streamlit", use_container_width=True)
