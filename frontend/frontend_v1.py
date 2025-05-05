@@ -37,20 +37,21 @@ with st.spinner("Fetching Predictions"):
 # Step 2: Add Station Metadata
 
 station_dict = {
-    np.float32(5905.140137): {"name": "Broadway & E 14 St",
+    np.float32(5905.0): {"name": "Broadway & E 14 St",
            "longitude": -73.99074142,
            "latitude": 40.73454567
            },
-    np.float32(6140.049805): {"name": "W 21 St & 6 Ave",
+    np.float32(6140.0): {"name": "W 21 St & 6 Ave",
            "longitude": -73.99415556,
            "latitude": 40.74173969},
-    np.float32(6822.089844): {"name": "1 Ave & E 68 St",
+    np.float32(6822.0): {"name": "1 Ave & E 68 St",
            "longitude": -73.958115339,
            "latitude": 40.765112281}
 }
 
 station_df = pd.DataFrame.from_dict(station_dict, orient='index').reset_index()
 station_df.rename(columns={'index': 'start_station_id'}, inplace=True)
+predictions["start_station_id"] = predictions["start_station_id"].round(0)
 predictions = pd.merge(predictions, station_df, on='start_station_id', how='left')
 progress_bar.progress(2 / N_STEPS)
 
